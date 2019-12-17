@@ -433,6 +433,82 @@ int BTF::resolve_args(std::string &func, std::map<std::string, SizedType> &varia
   return -1;
 }
 
+void BTF::display_funcs(void) const
+{
+  __s32 id, max = (__s32) btf__get_nr_types(btf);
+  std::string type = std::string("");
+  struct btf_dump_opts opts = { .ctx = &type, };
+  struct btf_dump *dump;
+  char err_buf[256];
+  int err;
+
+  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  err = libbpf_get_error(dump);
+  if (err)
+  {
+      libbpf_strerror(err, err_buf, sizeof(err_buf));
+      std::cerr << "BTF: failed to initialize dump (" << err_buf << ")" << std::endl;
+      return;
+  }
+
+  DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts, decl_opts,
+    .field_name   = "",
+    .indent_level = 0,
+  );
+
+  for (id = 1; id <= max; id++)
+  {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+
+    if (!btf_is_func(t))
+      continue;
+
+    const char *name = btf__name_by_offset(btf, t->name_off);
+
+    t = btf__type_by_id(btf, t->type);
+    if (!btf_is_func_proto(t))
+      /* bad.. */
+      break;
+
+    std::cout << "kfunc:" << name << std::endl;
+
+    if (!bt_verbose)
+      continue;
+
+    const struct btf_param *p;
+    int j;
+
+    for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++)
+    {
+      type = std::string("");
+
+      err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
+      if (err)
+        break;
+
+      name = btf__name_by_offset(btf, p->name_off);
+
+      std::cout << "    " << type << " $" << name << ";" << std::endl;
+    }
+
+    if (!t->type)
+      continue;
+
+    type = std::string("");
+
+    err = btf_dump__emit_type_decl(dump, t->type, &decl_opts);
+    if (err)
+      break;
+
+    std::cout << "    " << type << " $ret;" << std::endl;
+  }
+
+  if (id != max)
+    std::cerr << "ERROR: BTF data inconsistency" << std::endl;
+
+  btf_dump__free(dump);
+}
+
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
@@ -449,6 +525,7 @@ std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
   return std::string("");
 }
 
+std::vector BTF::display_funcs(const std::string& filter __attribute__((__unused__))) const { }
 } // namespace bpftrace
 
 #endif // HAVE_LIBBPF_BTF_DUMP
