@@ -91,6 +91,8 @@ struct SizedType
   bool is_internal = false;
   bool is_pointer = false;
   bool is_tparg = false;
+  bool is_tracing = false;
+  int tracing_arg;
   size_t pointee_size = 0;
 
   bool IsArray() const;
