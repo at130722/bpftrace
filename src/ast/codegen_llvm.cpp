@@ -836,7 +836,19 @@ void CodegenLLVM::visit(Variable &var)
 {
   if (!var.type.IsArray())
   {
-    expr_ = b_.CreateLoad(variables_[var.ident]);
+    if (var.type.is_tracing)
+    {
+      // We are accessing kfunc arguments (as variables), generate
+      // the specific ctx access for each argument/variable.
+
+      expr_ = b_.CreateLoad(b_.getInt64Ty(),
+                            b_.CreateGEP(ctx_, b_.getInt64(var.type.tracing_arg * sizeof(__u64))),
+                            var.ident);
+    }
+    else
+    {
+      expr_ = b_.CreateLoad(variables_[var.ident]);
+    }
   }
   else
   {

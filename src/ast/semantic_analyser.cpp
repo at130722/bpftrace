@@ -1437,6 +1437,9 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   auto search = variable_val_.find(var_ident);
   assignment.var->type = assignment.expr->type;
   if (search != variable_val_.end()) {
+    if (search->second.is_tracing) {
+      error("Can't assign value to function argument: " + var_ident, assignment.loc);
+    }
     if (search->second.type == Type::none) {
       if (is_final_pass()) {
         error("Undefined variable: " + var_ident, assignment.loc);
