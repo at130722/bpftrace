@@ -1698,6 +1698,20 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
   }
+  else if (ap.provider == "kfunc" || ap.provider == "kretfunc") {
+    auto ap_map = bpftrace_.btf_ap_args_;
+    auto it = ap_map.find(ap.provider + ap.func);
+
+    if (it != ap_map.end())
+    {
+      auto ap_vars = it->second;
+      variable_val_.insert(ap_vars.begin(), ap_vars.end());
+    }
+    else
+    {
+      error("Failed to resolve %s kfunc args.", ap.loc);
+    }
+  }
   else {
     ERR("Invalid provider: '" << ap.provider << "'", ap.loc);
   }

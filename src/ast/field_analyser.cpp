@@ -69,6 +69,16 @@ void FieldAnalyser::visit(Map &map)
 
 void FieldAnalyser::visit(Variable &var __attribute__((unused)))
 {
+  auto it = variables_.find(var.ident);
+
+  if (it != variables_.end())
+  {
+    auto stype = it->second;
+
+    if (stype.type == Type::cast)
+      type_ = stype.cast_type;
+  }
+
 }
 
 void FieldAnalyser::visit(ArrayAccess &arr)
@@ -159,6 +169,26 @@ void FieldAnalyser::visit(Predicate &pred)
 
 void FieldAnalyser::visit(AttachPoint &ap __attribute__((unused)))
 {
+  if (ap.provider == "kfunc" || ap.provider == "kretfunc")
+  {
+    // starting new attach point, clear and load new
+    // variables/arguments for kfunc if detected
+
+    variables_.clear();
+
+    if (!bpftrace_.btf_.resolve_args(ap.func, variables_, ap.provider == "kretfunc"))
+    {
+      bpftrace_.btf_ap_args_.insert({ap.provider + ap.func, variables_});
+
+      for(auto val : variables_)
+      {
+        auto stype = val.second;
+
+        if (stype.type == Type::cast)
+          bpftrace_.btf_set_.insert(stype.cast_type);
+      }
+    }
+  }
 }
 
 void FieldAnalyser::visit(Probe &probe)

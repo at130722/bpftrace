@@ -49,6 +49,8 @@ private:
   Node          *root_;
   BPFtrace      &bpftrace_;
   bpf_prog_type prog_type_;
+
+  std::map<std::string, SizedType> variables_;
 };
 
 } // namespace ast
