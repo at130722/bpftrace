@@ -509,6 +509,29 @@ void BTF::display_funcs(void) const
   btf_dump__free(dump);
 }
 
+bool BTF::has_function(std::string func)
+{
+  if (!has_data())
+    return false;
+
+  __s32 id, max = (__s32) btf__get_nr_types(btf);
+
+  for (id = 1; id <= max; id++)
+  {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+
+    if (!btf_is_func(t))
+      continue;
+
+    const char *name = btf__name_by_offset(btf, t->name_off);
+
+    if (name == func)
+      return true;
+  }
+
+  return false;
+}
+
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
@@ -526,6 +549,8 @@ std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
 }
 
 std::vector BTF::display_funcs(const std::string& filter __attribute__((__unused__))) const { }
+
+bool has_function(std::string func) { return false; }
 } // namespace bpftrace
 
 #endif // HAVE_LIBBPF_BTF_DUMP

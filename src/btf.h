@@ -32,6 +32,8 @@ public:
 
   int resolve_args(std::string &func, std::map<std::string, SizedType> &variables, bool ret);
 
+  bool has_function(std::string func);
+
 private:
   SizedType get_stype(__u32 id);
   const struct btf_type *btf_type_skip_modifiers(const struct btf_type *t);
