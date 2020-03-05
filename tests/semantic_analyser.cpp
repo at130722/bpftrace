@@ -2,6 +2,7 @@
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
+#include "field_analyser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gmock/gmock.h"
@@ -58,6 +59,9 @@ void test(BPFtrace &bpftrace,
 {
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
@@ -979,6 +983,21 @@ TEST(semantic_analyser, watchpoint)
   test("watchpoint::0x0:8:rww { 1 }", 1);
 }
 
+TEST(semantic_analyser, kfunc)
+{
+  BTF btf;
+
+  if (!btf.has_function("memcpy"))
+  {
+    std::cerr << std::endl << "NOTE: kfunc skipped" << std::endl << std::endl;
+    return;
+  }
+
+  test("kfunc:memcpy { 1 }", 0);
+  test("kretfunc:memcpy { 1 }", 0);
+  test("kfunc:memcpy { $x = $p; }", 0);
+  test("kretfunc:memcpy { $x = $ret; }", 0);
+}
 
 TEST(semantic_analyser, args_builtin_wrong_use)
 {
@@ -1126,6 +1145,18 @@ TEST(semantic_analyser, probe_short_name)
   test("h:cache-references:1000000 { 1 }", 0);
   test("s:faults:1000 { 1 }", 0);
   test("i:s:1 { 1 }", 0);
+
+  BTF btf;
+
+  if (btf.has_function("memcpy"))
+  {
+    test("f:memcpy { 1 }", 0);
+    test("rf:memcpy { 1 }", 0);
+  }
+  else
+  {
+    std::cerr << std::endl << "NOTE: kfunc skipped" << std::endl << std::endl;
+  }
 }
 
 TEST(semantic_analyser, positional_parameters)

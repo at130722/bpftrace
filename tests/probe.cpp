@@ -8,6 +8,7 @@
 #include "fake_map.h"
 #include "mocks.h"
 #include "semantic_analyser.h"
+#include "field_analyser.h"
 
 namespace bpftrace {
 namespace test {
@@ -24,6 +25,9 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ast::FieldAnalyser fields(driver.root_, *bpftrace);
+  EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
   clang.parse(driver.root_, *bpftrace);
@@ -58,6 +62,18 @@ TEST(probe, short_name)
   compare_bytecode("hardware:cache-references:1000000 { 1 }", "h:cache-references:1000000 { 1 }");
   compare_bytecode("software:faults:1000 { 1 }", "s:faults:1000 { 1 }");
   compare_bytecode("interval:s:1 { 1 }", "i:s:1 { 1 }");
+
+  BTF btf;
+
+  if (btf.has_function("memcpy"))
+  {
+    compare_bytecode("kfunc:memcpy{ 1 }", "f:memcpy { 1 }");
+    compare_bytecode("kretfunc:memcpy { 1 }", "rf:memcpy { 1 }");
+  }
+  else
+  {
+    std::cerr << std::endl << "NOTE: kfunc skipped" << std::endl << std::endl;
+  }
 }
 
 } // namespace probe
