@@ -207,6 +207,9 @@ static std::string btf_type_str(const std::string& type)
 
 std::string BTF::c_def(std::unordered_set<std::string>& set)
 {
+  if (!has_data())
+    return std::string("");;
+
   std::string ret = std::string("");
   struct btf_dump_opts opts = { .ctx = &ret, };
   struct btf_dump *dump;
@@ -244,6 +247,9 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
 
 std::string BTF::type_of(const std::string& name, const std::string& field)
 {
+  if (!has_data())
+    return std::string("");;
+
   __s32 type_id = btf__find_by_name(btf, btf_type_str(name).c_str());
 
   if (type_id < 0)
@@ -259,6 +265,9 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
       (BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT &&
        BTF_INFO_KIND(type->info) != BTF_KIND_UNION))
     return std::string("");
+
+  if (!has_data())
+    return std::string("");;
 
   // We need to walk through oaa the struct/union members
   // and try to find the requested field name.
@@ -386,6 +395,9 @@ SizedType BTF::get_stype(__u32 id)
 
 int BTF::resolve_args(std::string &func, std::map<std::string, SizedType> &variables, bool ret)
 {
+  if (!has_data())
+    return false;
+
   __s32 id, max = (__s32) btf__get_nr_types(btf);
   std::string name = func;
 
@@ -435,6 +447,9 @@ int BTF::resolve_args(std::string &func, std::map<std::string, SizedType> &varia
 
 void BTF::display_funcs(void) const
 {
+  if (!has_data())
+    return;
+
   __s32 id, max = (__s32) btf__get_nr_types(btf);
   std::string type = std::string("");
   struct btf_dump_opts opts = { .ctx = &type, };
